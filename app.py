@@ -2,9 +2,7 @@ from flask import Flask, request, render_template, send_file
 import pandas as pd
 import os
 
-app = Flask(__name__)
-UPLOAD_FOLDER = 'Templates'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app = Flask(__name__, template_folder='templates')
 
 # Route for the upload page
 @app.route('/')
