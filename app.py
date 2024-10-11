@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = 'Templates'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Route for the upload page
