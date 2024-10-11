@@ -1,49 +1,53 @@
-from flask import Flask, request, render_template, send_file
-import pandas as pd
 import os
+from flask import Flask, render_template, request, send_file
+import pandas as pd
 
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__)
 
-# Route for the upload page
+# Define the folder to store uploaded files temporarily
+UPLOAD_FOLDER = '/tmp/uploads'  # Use Render's temporary storage
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 @app.route('/')
 def upload_form():
     return render_template('upload.html')
 
-# Handle file upload and processing
 @app.route('/', methods=['POST'])
 def upload_files():
     # Get the uploaded files
     file1 = request.files['file1']
     file2 = request.files['file2']
 
-    # Save the files to the upload folder
+    # Save the files to the UPLOAD_FOLDER
     file1_path = os.path.join(UPLOAD_FOLDER, file1.filename)
     file2_path = os.path.join(UPLOAD_FOLDER, file2.filename)
+
     file1.save(file1_path)
     file2.save(file2_path)
 
-    # Process the CSV files
-    and_csv = pd.read_csv(file1_path)
-    ios_csv = pd.read_csv(file2_path)
+    # Your processing logic goes here...
+    # Read the CSV files
+    df1 = pd.read_csv(file1_path)
+    df2 = pd.read_csv(file2_path)
 
-    # Replace 'NULLVALUE' and '-' with 0 in columns J, K, L
-    columns_to_replace = ['J', 'K', 'L']
-    and_csv[columns_to_replace] = and_csv[columns_to_replace].replace(['NULLVALUE', '-'], 0)
-    ios_csv[columns_to_replace] = ios_csv[columns_to_replace].replace(['NULLVALUE', '-'], 0)
+    # Example processing: Replace NULLVALUE and "-" with 0 in specific columns
+    for df in [df1, df2]:
+        df[['J', 'K', 'L']] = df[['J', 'K', 'L']].replace({"NULLVALUE": 0, "-": 0})
 
-    # Merge the two CSVs: Append 'And' tab (file1) to 'iOS' tab (file2), skipping the first row of 'And'
-    and_tab_no_header = and_csv.iloc[1:]  # Skip the first row (header)
-    merged_df = pd.concat([ios_csv, and_tab_no_header], ignore_index=True)
+    # Export iOS tab from Product_Mix_iOS and And tab from Product_Mix_And
+    # Assuming 'iOS' and 'And' are the names of the DataFrame
+    ios_df = df2  # Product_Mix_iOS
+    and_df = df1.iloc[1:]  # Product_Mix_And (omit first row)
 
-    # Trim whitespace from all columns
-    merged_df = merged_df.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+    # Append And tab to iOS tab
+    result_df = pd.concat([ios_df, and_df], ignore_index=True).apply(lambda x: x.str.strip() if x.dtype == "object" else x)
 
-    # Save the result as a CSV file
-    output_file = os.path.join(UPLOAD_FOLDER, 'merged_product_mix.csv')
-    merged_df.to_csv(output_file, index=False)
+    # Output the result as CSV
+    result_path = os.path.join(UPLOAD_FOLDER, 'result.csv')
+    result_df.to_csv(result_path, index=False)
 
-    # Send the resulting file for download
-    return send_file(output_file, as_attachment=True, download_name='merged_product_mix.csv')
+    # Return the processed file to the user for download
+    return send_file(result_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
